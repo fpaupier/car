@@ -1,6 +1,8 @@
 ## Building a minimal robot car
 
 ![doc](doc/car-v1.png)
+You can pilot it from your local wifi network from your laptop/phone
+![portal](doc/browser%20control.jpeg)
 
 ### BOM
 - 4 wheel chassis
