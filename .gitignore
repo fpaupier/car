@@ -2,3 +2,4 @@
 cmake-build-debug
 .pio/build
 .pio/esp-wrover-kit
+include/secrets.h
