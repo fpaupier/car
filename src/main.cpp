@@ -6,25 +6,42 @@
 
 #include <Arduino.h>
 
-// Set LED_BUILTIN if it is not defined by Arduino framework
-#ifndef LED_BUILTIN
-    #define LED_BUILTIN 2
-#endif
 
-void setup()
-{
-  // initialize LED digital pin as an output.
-  pinMode(LED_BUILTIN, OUTPUT);
+// Define motor control pins (adjust based on your wiring)
+#define MOTOR1_IN1 12
+#define MOTOR1_IN2 13
+#define MOTOR2_IN1 14
+#define MOTOR2_IN2 15
+// Repeat for MOTOR3 and MOTOR4 as needed
+
+void setup() {
+    pinMode(MOTOR1_IN1, OUTPUT);
+    pinMode(MOTOR1_IN2, OUTPUT);
+    pinMode(MOTOR2_IN1, OUTPUT);
+    pinMode(MOTOR2_IN2, OUTPUT);
 }
 
-void loop()
-{
-  // turn the LED on (HIGH is the voltage level)
-  digitalWrite(LED_BUILTIN, HIGH);
-  // wait for a second
-  delay(1000);
-  // turn the LED off by making the voltage LOW
-  digitalWrite(LED_BUILTIN, LOW);
-   // wait for a second
-  delay(1000);
+
+void motorForward(int in1, int in2) {
+    digitalWrite(in1, HIGH);
+    digitalWrite(in2, LOW);
+}
+
+void motorStop(int in1, int in2) {
+    digitalWrite(in1, LOW);
+    digitalWrite(in2, LOW);
+}
+
+void loop() {
+    // Test Motor 1 Forward
+    motorForward(MOTOR1_IN1, MOTOR1_IN2);
+    delay(2000);
+    motorStop(MOTOR1_IN1, MOTOR1_IN2);
+    delay(1000);
+
+    // Test Motor 2 Forward
+    motorForward(MOTOR2_IN1, MOTOR2_IN2);
+    delay(2000);
+    motorStop(MOTOR2_IN1, MOTOR2_IN2);
+    delay(1000);
 }
