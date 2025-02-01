@@ -1,7 +1,6 @@
-#include <Arduino.h>
+#include <esp_now.h>
 #include <WiFi.h>
-#include <WebServer.h>
-#include "secrets.h"
+#include <Arduino.h>
 
 // Rear Motors (L298N 1)
 #define REAR_LEFT_IN1  12
@@ -15,12 +14,13 @@
 #define FRONT_RIGHT_IN3 18
 #define FRONT_RIGHT_IN4 19
 
+// Data structure for joystick values
+typedef struct struct_message {
+    int x;
+    int y;
+    bool button;
+} struct_message;
 
-// WiFi credentials
-const char* ssid = SSID_NAME;
-const char* password = SSID_PASSWORD;
-
-WebServer server(80);
 
 // Motor control functions
 void setMotor(int in1, int in2, bool forward) {
@@ -39,43 +39,70 @@ void stopAllMotors() {
     digitalWrite(FRONT_RIGHT_IN4, LOW);
 }
 
-void handleRoot() {
-    String html = R"HTML(
-  <!DOCTYPE html>
-  <html>
-  <head>
-    <title>4WD Control</title>
-    <style>
-      .container {text-align: center; margin-top: 50px;}
-      .button {
-        padding: 20px;
-        font-size: 20px;
-        margin: 5px;
-        border-radius: 12px;
-      }
-    </style>
-  </head>
-  <body>
-    <div class="container">
-      <h1>4WD Control</h1>
-      <button class="button" onclick="move('forward')">&uarr; Forward</button><br>
-      <button class="button" onclick="move('left')">&larr; Left</button>
-      <button class="button" onclick="move('stop')">STOP</button>
-      <button class="button" onclick="move('right')">&rarr; Right</button><br>
-      <button class="button" onclick="move('backward')">&darr; Backward</button>
-    </div>
-    <script>
-      function move(direction) {
-        fetch('/' + direction).then(r => console.log(r.status))
-      }
-    </script>
-  </body>
-  </html>
-  )HTML"; // Matches the custom delimiter "HTML"
+// ESP-NOW callback
+void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len) {
+    Serial.println("Data received");
+    struct_message joystick;
+    memcpy(&joystick, incomingData, sizeof(joystick));
 
+    // Define deadzone to prevent motor jitter
+    const int DEADZONE = 100;
 
-    server.send(200, "text/html", html);
+    // Normalize joystick values to -100 to +100 range
+    int xValue = map(joystick.x, -2048, 2048, -100, 100);
+    int yValue = map(joystick.y, -2048, 2048, -100, 100);
+
+    // Apply deadzone
+    if (abs(xValue) < DEADZONE) xValue = 0;
+    if (abs(yValue) < DEADZONE) yValue = 0;
+
+    // Stop if both values are in deadzone
+    if (xValue == 0 && yValue == 0) {
+        stopAllMotors();
+        return;
+    }
+
+    // Calculate left and right motor directions
+    bool leftForward, rightForward;
+
+    // Forward/Backward motion
+    if (abs(yValue) > abs(xValue)) {
+        if (yValue > 0) {  // Forward
+            leftForward = true;
+            rightForward = true;
+        } else {  // Backward
+            leftForward = false;
+            rightForward = false;
+        }
+
+        // Add turning influence while moving
+        if (xValue > 0) {  // Right turn
+            rightForward = !rightForward;  // Reverse right motors
+        } else if (xValue < 0) {  // Left turn
+            leftForward = !leftForward;   // Reverse left motors
+        }
+    }
+        // Left/Right rotation
+    else {
+        if (xValue > 0) {  // Turn right
+            leftForward = true;
+            rightForward = false;
+        } else {  // Turn left
+            leftForward = false;
+            rightForward = true;
+        }
+    }
+
+    // Apply motor directions
+    // Left side motors
+    setMotor(REAR_LEFT_IN1, REAR_LEFT_IN2, leftForward);
+    setMotor(FRONT_LEFT_IN1, FRONT_LEFT_IN2, leftForward);
+
+    // Right side motors
+    setMotor(REAR_RIGHT_IN3, REAR_RIGHT_IN4, rightForward);
+    setMotor(FRONT_RIGHT_IN3, FRONT_RIGHT_IN4, rightForward);
 }
+
 
 void setup() {
     // Initialize motor pins
@@ -89,62 +116,17 @@ void setup() {
     pinMode(FRONT_RIGHT_IN4, OUTPUT);
     stopAllMotors();
 
-    // Connect to WiFi
-    Serial.begin(115200); // Initialize serial communication
-    WiFi.begin(ssid, password);
-    Serial.print("Connecting to WiFi");
-    while (WiFi.status() != WL_CONNECTED) {
-        delay(500);
-        Serial.print(".");
+    // Init ESP-NOW
+    WiFi.mode(WIFI_STA);
+    if (esp_now_init() != ESP_OK) {
+        Serial.println("Error initializing ESP-NOW");
+        return;
     }
+    Serial.println("ESP-NOW initialized");
 
-    Serial.println("\nConnected!");
-    Serial.print("ESP32 IP Address: ");
-    Serial.println(WiFi.localIP()); // Print the IP address
-
-    // Set up web server
-    server.on("/", handleRoot);
-    server.on("/forward", []() {
-        // All motors forward
-        setMotor(REAR_LEFT_IN1, REAR_LEFT_IN2, false);
-        setMotor(REAR_RIGHT_IN3, REAR_RIGHT_IN4, false);
-        setMotor(FRONT_LEFT_IN1, FRONT_LEFT_IN2, false);
-        setMotor(FRONT_RIGHT_IN3, FRONT_RIGHT_IN4, false);
-        server.send(200);
-    });
-    server.on("/backward", []() {
-        // All motors backward
-        setMotor(REAR_LEFT_IN1, REAR_LEFT_IN2, true);
-        setMotor(REAR_RIGHT_IN3, REAR_RIGHT_IN4, true);
-        setMotor(FRONT_LEFT_IN1, FRONT_LEFT_IN2, true);
-        setMotor(FRONT_RIGHT_IN3, FRONT_RIGHT_IN4, true);
-        server.send(200);
-    });
-    server.on("/left", []() {
-        // Right side forward, left side backward
-        setMotor(REAR_LEFT_IN1, REAR_LEFT_IN2, true);
-        setMotor(REAR_RIGHT_IN3, REAR_RIGHT_IN4, false);
-        setMotor(FRONT_LEFT_IN1, FRONT_LEFT_IN2, true);
-        setMotor(FRONT_RIGHT_IN3, FRONT_RIGHT_IN4, false);
-
-        server.send(200);
-    });
-    server.on("/right", []() {
-        // Left side forward, rigt side backward
-        setMotor(REAR_LEFT_IN1, REAR_LEFT_IN2, false);
-        setMotor(REAR_RIGHT_IN3, REAR_RIGHT_IN4, true);
-        setMotor(FRONT_LEFT_IN1, FRONT_LEFT_IN2, false);
-        setMotor(FRONT_RIGHT_IN3, FRONT_RIGHT_IN4, true);
-        server.send(200);
-    });
-    server.on("/stop", []() {
-        stopAllMotors();
-        server.send(200);
-    });
-
-    server.begin();
+    esp_now_register_recv_cb(OnDataRecv);
 }
 
 void loop() {
-    server.handleClient();
+    // Empty - everything handled in callbacks
 }
