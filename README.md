@@ -30,13 +30,6 @@ brain of the operation, receiving commands via ESP-NOW protocol from a joystick 
 
 ## Bill of material - Components and their sources (prices as of March 2025)
 
-<style>
-table img {
-  max-width: 150px;
-  max-height: 100px;
-  object-fit: contain;
-}
-</style>
 
 | Component                          | Image                             | Source                                                                                                                         | Price (EUR) | Quantity | Total Price (EUR) |
 |------------------------------------|-----------------------------------|--------------------------------------------------------------------------------------------------------------------------------|-------------|----------|-------------------|
