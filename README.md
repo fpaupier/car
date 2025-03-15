@@ -1,30 +1,115 @@
-## Building a minimal robot car
+# ESP-NOW Controlled RC Car
 
-![doc](doc/car-v1.png)
+![ESP-NOW](https://img.shields.io/badge/Protocol-ESP--NOW-brightgreen)
+![ESP32](https://img.shields.io/badge/Board-ESP32-blue)
+![PlatformIO](https://img.shields.io/badge/Framework-PlatformIO-orange)
 
-You can pilot it from your local wifi network from your laptop/phone:
+This project documents how to build a simple remote-controlled car using an ESP32 microcontroller and the ESP-NOW
+protocol for wireless communication.
 
-![portal](doc/browser%20control.jpeg)
+> We achieved a control range of up to 115 meters between the receiver (car) and transmitter (controller).
 
-### BOM
-- [4 wheel car chassis](https://www.kubii.com/en/robots-extensions/3773-car-chassis-robot-kit-for-raspberry-pi-and-arduino-3272496312517.html?mot_tcid=fc5f5b4a-4b19-4d77-b36e-6630a0274d86)
-- 4x engine continuous current between 3 an 12 volt - recommend (6 to 8V tension)
-- [4x h bridge L298N](https://electro-proto.fr/modules-gestion-moteurs-et-puissance/29-module-pour-controle-de-moteurs-a-base-de-l298n-3760373490408.html) 
-- [ESP32 WRoom 32](https://www.amazon.com/ESP-WROOM-32-Development-Microcontroller-Integrated-Compatible/dp/B08D5ZD528?dib=eyJ2IjoiMSJ9.is-SH_RLGHiZZUrqvTWU_DFFr6XAPKtIzbKWDMtYTKP6_lVl7IE8BynEkyrBR_coo-GrVHkJcoilGGal9ZiaowvD3TF4kL6VFJcDTS3dpnjiY3id-Wg9HziUbuutplWqdpEgVVqkg4nUWL9eVSYsdppkLOUCTduDh1fVEDUJNyoOPT6jIyNVYxWRHJbEejLXgxYUVG-GLNP252YKRFSOL5235jsdwY9QYHMj8RNZYrM.D-4MOKq4Qnq6x01nreRU3IJ61_wwJPDIpg7Yx0Ble5A&dib_tag=se&keywords=esp32+wroom&qid=1738788227&sr=8-3) with wifi and BLE
-- Powerbank of 1000mah with usb and usbc output (to power the esp32)
-- 2x 9V battery with pos and neg output cable (to power the motors) 
+For the controller-related parts and code, refer to the dedicated
+repository: [github.com/fpaupier/car-transmitter](https://github.com/fpaupier/car-transmitter)
 
-My goal is to be able to pilot my car through wifi with a minimal web interface that I can access from my laptop or 
-phone with simple controls to tell teh car to go either straight, left, right or straight. 
+## Hardware - Building the car
 
-### Getting started
+The car uses a standard 4-wheel chassis with DC motors controlled by H-bridge motor drivers. An ESP32 serves as the
+brain of the operation, receiving commands via ESP-NOW protocol from a joystick controller.
 
-I use platform IO
+Click to display images
 
-Copy the `example.secrets.h` into `secrets.h` in the `include` directory to enable remote control
+<details closed>
 
-Build the project
+<summary>Click to display images</summary>
 
-Upload an monitor to get the ESP32 IP adress
+![car](doc/car-v1.png)
+![control](doc/browser%20control.jpeg)
 
-Connect to your browser to pilot the car
+</details>
+
+### Sourcing the components
+
+Bill of material - Components and their sources (prices as of March 2025)
+
+| Component                          | Source                                                                                                                         | Price (EUR) | Quantity | Total Price (EUR) |
+|------------------------------------|--------------------------------------------------------------------------------------------------------------------------------|-------------|----------|-------------------|
+| 4-wheel car chassis                | [Kubii](https://www.kubii.com/en/robots-extensions/3773-car-chassis-robot-kit-for-raspberry-pi-and-arduino-3272496312517.html) | 36.96       | 1        | 36.96             |
+| DC Motors (3-12V)                  | Included with chassis                                                                                                          | -           | 4        | -                 |
+| H-bridge L298N                     | [Amazon.fr](https://amzn.eu/d/dbmBLjt)                                                                                         | 5.34        | 2        | 10.69             |
+| ESP32 WROOM-32                     | [Amazon.fr](https://amzn.eu/d/a1N37u4)                                                                                         | 8.99        | 1        | 8.99              |
+| Powerbank (to power the ESP32)     | Generic                                                                                                                        | 15.00       | 1        | 15.00             |
+| 9V Batteries (to power the motors) | [Amazon.fr](https://amzn.eu/d/emOUOg1)                                                                                         | 3.50        | 2        | 8.99              |
+| Battery connectors                 | [Amazon.fr](https://amzn.eu/d/2nVmRUF)                                                                                         | 5.00        | 2        | 9.99              |
+| **Total**                          |                                                                                                                                |             |          | **90.62€**        |
+
+### Wiring Instructions
+
+#### Motor Driver Connections
+
+| ESP32 Pin | L298N Pin | Description                   |
+|-----------|-----------|-------------------------------|
+| GPIO 25   | IN1       | Left motors forward control   |
+| GPIO 26   | IN2       | Left motors backward control  |
+| GPIO 32   | IN3       | Right motors forward control  |
+| GPIO 33   | IN4       | Right motors backward control |
+| 5V        | 5V        | Logic power supply            |
+| GND       | GND       | Ground connection             |
+
+The L298N's motor outputs (OUT1, OUT2, OUT3, OUT4) connect to the respective DC motors.
+
+#### Power Connections
+
+- ESP32: Powered via USB from the powerbank
+- Motors: Powered by two 9V batteries connected to the L298N's power input
+
+## Software - Code to Run the Car
+
+> **Prerequisite**: This project uses PlatformIO to build and upload code to the ESP32. You will need to install it -
+> see [PlatformIO.org](https://platformio.org/)
+
+### Getting Your ESP32's MAC Address
+
+Since we use [ESP-NOW](https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-reference/network/esp_now.html)
+for communication, you'll need to know your car's MAC address to configure the controller. Run this code on your car's
+ESP32:
+
+```cpp
+
+#include
+
+void setup() {
+Serial.begin(115200);
+WiFi.mode(WIFI_STA); // Set as WiFi station
+delay(100); // Short delay for initialization
+}
+
+void loop() {
+Serial.print("ESP32 Car MAC Address: ");
+Serial.println(WiFi.macAddress());
+}
+
+```
+
+### Source Code Structure
+
+```
+
+car/
+├── src/
+│ └── main.cpp // Main program flow
+
+```
+
+### Getting Started
+
+1. Clone the repository
+2. Build the project using PlatformIO
+3. Upload to your ESP32 and monitor the serial output
+4. Use the joystick controller to pilot the car
+
+## Troubleshooting
+
+- If motors don't respond, check battery levels and connections
+- Ensure both the car and controller are powered on
+- For optimal range, keep the ESP builtin antennas unobstructed
