@@ -7,6 +7,11 @@
 This project documents how to build a simple remote-controlled car using an ESP32 microcontroller and the ESP-NOW
 protocol for wireless communication.
 
+<div align="center">
+  <img src="doc/car-v1.png" alt="car" width="400">
+</div>
+
+
 > We achieved a control range of up to 115 meters between the receiver (car) and transmitter (controller).
 
 For the controller-related parts and code, refer to the dedicated
@@ -17,19 +22,9 @@ repository: [github.com/fpaupier/car-transmitter](https://github.com/fpaupier/ca
 The car uses a standard 4-wheel chassis with DC motors controlled by H-bridge motor drivers. An ESP32 serves as the
 brain of the operation, receiving commands via ESP-NOW protocol from a joystick controller.
 
-<details closed>
-
-<summary>Click to display images</summary>
-
-![car](doc/car-v1.png)
-![control](doc/browser%20control.jpeg)
-
-</details>
-
 ### Sourcing the components
 
 ## Bill of material - Components and their sources (prices as of March 2025)
-
 
 | Component                          | Image                             | Source                                                                                                                         | Price (EUR) | Quantity | Total Price (EUR) |
 |------------------------------------|-----------------------------------|--------------------------------------------------------------------------------------------------------------------------------|-------------|----------|-------------------|
