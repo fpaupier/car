@@ -47,16 +47,49 @@ Bill of material - Components and their sources (prices as of March 2025)
 
 #### Motor Driver Connections
 
-| ESP32 Pin | L298N Pin | Description                   |
-|-----------|-----------|-------------------------------|
-| GPIO 25   | IN1       | Left motors forward control   |
-| GPIO 26   | IN2       | Left motors backward control  |
-| GPIO 32   | IN3       | Right motors forward control  |
-| GPIO 33   | IN4       | Right motors backward control |
-| 5V        | 5V        | Logic power supply            |
-| GND       | GND       | Ground connection             |
+##### Front Motors (L298N 2)
 
-The L298N's motor outputs (OUT1, OUT2, OUT3, OUT4) connect to the respective DC motors.
+| ESP32 Pin | L298N Pin | Description                         |
+|-----------|-----------|-------------------------------------|
+| GPIO 16   | IN1       | Front left motor forward            |
+| GPIO 17   | IN2       | Front left motor backward           |
+| GPIO 18   | IN3       | Front right motor forward           |
+| GPIO 19   | IN4       | Front right motor backward          |
+| GPIO 27   | ENA       | Front left motor PWM speed control  |
+| GPIO 26   | ENB       | Front right motor PWM speed control |
+| 5V        | 5V        | Logic power supply                  |
+| GND       | GND       | Ground connection                   |
+
+##### Rear Motors (L298N 1)
+
+| ESP32 Pin | L298N Pin | Description                        |
+|-----------|-----------|------------------------------------|
+| GPIO 12   | IN1       | Rear left motor forward            |
+| GPIO 13   | IN2       | Rear left motor backward           |
+| GPIO 14   | IN3       | Rear right motor forward           |
+| GPIO 15   | IN4       | Rear right motor backward          |
+| GPIO 25   | ENA       | Rear left motor PWM speed control  |
+| GPIO 32   | ENB       | Rear right motor PWM speed control |
+| 5V        | 5V        | Logic power supply                 |
+| GND       | GND       | Ground connection                  |
+
+#### PWM Configuration
+
+The code uses 4 PWM channels for speed control, this enables to use the analog joystick value for progressive speed. 
+
+- Channel 0: Front left motor
+- Channel 1: Front right motor
+- Channel 2: Rear left motor
+- Channel 3: Rear right motor
+
+PWM is configured with a frequency of 5000Hz and 8-bit resolution (0-255 values).
+
+#### Power Connections
+
+- ESP32: Powered via USB from the powerbank
+- Motors: Powered by two 9V batteries connected to the L298N's power inputs
+- Built-in LED: GPIO 2 is used for status indication
+
 
 #### Power Connections
 
