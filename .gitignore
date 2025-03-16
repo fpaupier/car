@@ -3,3 +3,6 @@ cmake-build-debug
 .pio/build
 .pio/esp-wrover-kit
 include/secrets.h
+doc/ESP-NOW-RC-Car/ESP-NOW-RC-Car-backups/*
+doc/ESP-NOW-RC-Car/#auto_saved_files#
+doc/ESP-NOW-RC-Car/~*
